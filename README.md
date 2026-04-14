@@ -40,13 +40,29 @@ The data is split by **"Lighting Sessions"** to prevent Scene Leakage and evalua
 Images taken in the same session (same background/lighting) are never split across Train and Test sets. This forces the model to learn the semantic features of the objects rather than memorizing the background textures.
 
 ## 4. Methodology (Pipeline)
-* **Annotation:** Fine-grained polygon annotation using **CVAT (COCO 1.0 format)** with AI-assisted segmentation (SAM).
-* **Augmentation:** **Albumentations** library for joint spatial transforms (Horizontal Flip, Rotation, Elastic Transform) to maintain mask-image integrity.
-* **Model:** **DeepLabV3** with a ResNet-101 backbone.
-  * *Strategy:* Freeze the backbone weights and fine-tune only the classifier head to adapt to the 3-class egocentric domain.
 
-## 5. Sample Data (Hard Examples)
-> *Note: These samples represent the "Hard Examples" used to train the model's robustness against backlighting and severe occlusion.*
+* **Annotation:** Fine-grained polygon annotation using **CVAT (COCO 1.0 format)**.
+* **Augmentation:** **Albumentations** library for joint spatial transforms (ColorJitter for lighting invariance, Horizontal Flip, etc.) to maintain mask-image integrity while simulating extreme environments.
+* **Model:** **DeepLabV3** with a **ResNet-50** backbone (PyTorch).
+* **Classes (4):** `Background (0)`, `Hand (1)`, `Bottle (2)`, `Cup (3)`.
+* **Hyperparameters:**
+  * Optimizer: Adam (lr = 0.001)
+  * Loss Function: CrossEntropyLoss
+  * Batch Size: 4
+  * Epochs: 5 (Initial setup)
+
+## 5. Early Training Results
+
+The model was trained on a Google Colab T4 GPU. In just 5 epochs, the training loss showed a stable and promising convergence, confirming that the Custom Dataloader and Adam optimizer were properly configured for the egocentric domain.
+
+* Epoch [1/5] | Loss: 0.7925
+* Epoch [5/5] | Loss: 0.5181
+
+*(Note: Full evaluation metrics including mIoU on the unseen test set will be updated after the Zero-Shot inference phase.)*
+
+## 6. Sample Data (Hard Examples)
+
+Note: These samples represent the "Hard Examples" used to train the model's robustness against backlighting and severe occlusion.
 
 | Firm Grip & Severe Occlusion | Harsh Backlighting | Shadow & Low Light |
 | :---: | :---: | :---: |
@@ -54,7 +70,20 @@ Images taken in the same session (same background/lighting) are never split acro
 | *[Firm Grip of a Bottle]* | *[A Bottle with Strong Backlight]* | *[A Bottle with Low Light]* |
 
 ---
-## 6. How to Run (TBA)
-*Requirements: PyTorch, Torchvision, Albumentations, OpenCV*
+## 7. How to Run
+
+**1. Environment Setup**
 ```bash
-# Installation and execution instructions will be updated upon completion of the training script.
+pip install torch torchvision torchaudio albumentations opencv-python pycocotools
+```
+
+**2. Training**
+The training pipeline is fully implemented in the provided Colab Notebook (`.ipynb`).
+1. Mount Google Drive and set the directory to the dataset folder.
+2. Run the `EgocentricDataset` class and `DataLoader` cells.
+3. Load the pre-trained `deeplabv3_resnet50` and modify the classifier head for 4 classes.
+4. Execute the training loop.
+5. The model weights will be saved automatically as `my_deeplabv3_model.pth`.
+
+**3. Inference (Testing)**
+* Code for testing the trained model on unseen data is currently under development (Coming soon).
