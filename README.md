@@ -51,39 +51,50 @@ Images taken in the same session (same background/lighting) are never split acro
   * Batch Size: 4
   * Epochs: 5 (Initial setup)
 
-## 5. Early Training Results
+## 5. Experimental Results: The Power of Hard Example Mining
 
-The model was trained on a Google Colab T4 GPU. In just 5 epochs, the training loss showed a stable and promising convergence, confirming that the Custom Dataloader and Adam optimizer were properly configured for the egocentric domain.
+Initially, we hypothesized that the model could achieve zero-shot generalization in unseen lighting. However, the baseline model severely struggled under extreme backlight. By injecting just **3 Hard Example images**, we significantly enhanced the model's robustness.
 
-* Epoch [1/5] | Loss: 0.7925
-* Epoch [5/5] | Loss: 0.5181
+### 📊 5.1. Quantitative Results (mIoU)
 
-*(Note: Full evaluation metrics including mIoU on the unseen test set will be updated after the Zero-Shot inference phase.)*
+| Class | Exp 1: Baseline (40 Imgs) | Exp 2: Hard Example Mining (43 Imgs) | Improvement |
+| :--- | :---: | :---: | :---: |
+| **Background** | 83.66% | 83.25% | - |
+| **Hand** | 42.64% | **55.24%** | **+12.60%p** |
+| **Bottle** | 45.11% | **47.96%** | +2.85%p |
+| **Cup** | 0.05% | 0.00% | - |
+| **🏆 Mean IoU** | **42.87%** | **46.61%** | **🚀 +3.74%p** |
 
-## 6. Sample Data (Hard Examples)
+### 🖼️ 5.2. Qualitative Results: Visual Comparison (Backlight Case)
 
-Note: These samples represent the "Hard Examples" used to train the model's robustness against backlighting and severe occlusion.
-
-| Firm Grip & Severe Occlusion | Harsh Backlighting | Shadow & Low Light |
+| **Condition** | **Exp 1: Baseline (Failure)** | **Exp 2: Hard Example (Success)** |
 | :---: | :---: | :---: |
-| <img src="https://github.com/user-attachments/assets/375232a2-1869-46cc-9de6-388256f8e43e" alt="Firm Grip Sample" width="250"> | <img src="https://github.com/user-attachments/assets/2c8a5a23-9cd4-412b-8ba3-3155ffd89acf" alt="Sample 2" width="250"> | <img src="https://github.com/user-attachments/assets/282cac39-1f39-44f3-9872-7d33057dd1da" alt="Sample 3" width="250"> |
-| *[Firm Grip of a Bottle]* | *[A Bottle with Strong Backlight]* | *[A Bottle with Low Light]* |
+| **Extreme Backlight** | <img src="images/results/experiment1_failed_backlight.png" width="350" height="350" style="display:block; object-fit: cover; object-position: center;"> | <img src="images/results/experiment2_successful_backlight.png" width="350" height="350" style="display:block; object-fit: cover; object-position: center;"> |
+| **Observation** | Model failed to detect the hand, relying only on color cues. | Model successfully captured the **hand silhouette** despite zero color info. |
+
+## 6. Key Insights & Limitations
+
+### 💡 6.1. Data Efficiency through Edge Case Targeting
+Instead of blindly increasing dataset size, adding **3 targeted images** solved a domain failure. This proves that targeting Edge Cases is a highly **data-efficient strategy** for enhancing robustness.
+
+### ⚠️ 6.2. Challenge: Intrinsic Transparency
+* **Observation:** 'Cup' class yielded **0% mIoU**.
+* **Analysis:** Unlike bottles, **transparent cups** allow background pixels to pass through. The lack of distinct visual features, combined with severe occlusion, remains a critical challenge.
+
+## 7. Next Steps: Strategic Troubleshooting
+
+Before advancing to broader theoretical architectures, a troubleshooting phase is planned to overcome the current 'Cup' recognition failure:
+1. **Data Augmentation:** Utilizing `ColorJitter` or `MixUp` to force the model to focus on the subtle edge boundaries of transparent objects.
+2. **Loss Weighting:** Applying `Focal Loss` or class-specific weights to increase the penalty for misclassifying the 'Cup' pixels, forcing the model to prioritize this underrepresented and challenging class.
 
 ---
-## 7. How to Run
+## 8. How to Run
 
 **1. Environment Setup**
 ```bash
 pip install torch torchvision torchaudio albumentations opencv-python pycocotools
 ```
 
-**2. Training**
-The training pipeline is fully implemented in the provided Colab Notebook (`.ipynb`).
-1. Mount Google Drive and set the directory to the dataset folder.
-2. Run the `EgocentricDataset` class and `DataLoader` cells.
-3. Load the pre-trained `deeplabv3_resnet50` and modify the classifier head for 4 classes.
-4. Execute the training loop.
-5. The model weights will be saved automatically as `my_deeplabv3_model.pth`.
+**2. Execution**
 
-**3. Inference (Testing)**
-* Code for testing the trained model on unseen data is currently under development (Coming soon).
+The entire pipeline (Data loading, Model initialization, Exp 1 Training, Exp 2 Hard Example Mining, and mIoU Evaluation) is fully implemented in the provided Colab Notebook (Egocentric_Hand_Segmentation_DeepLabV3.ipynb). It is structured for a seamless top-to-bottom execution.
